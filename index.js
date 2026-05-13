@@ -1,6 +1,10 @@
 import { createServer } from "node:http";
 import fs from "node:fs";
 
+import { join } from "node:path";
+
+const __dirname = import.meta.dirname;
+
 const hostname = "localhost";
 const port = 8080;
 
@@ -24,7 +28,7 @@ const requestListener = function (req, res) {
       fileName = "404.html";
   }
 
-  fs.readFile(fileName, (err, data) => {
+  fs.readFile(join(__dirname, fileName), (err, data) => {
     if (err) {
       res.writeHead(500, { "content-type": "text/plain" });
       res.end("server error");
