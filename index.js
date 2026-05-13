@@ -1,6 +1,5 @@
 import { createServer } from "node:http";
-import fs from "node:fs";
-
+import fs from "node:fs/promises";
 import { join } from "node:path";
 
 const __dirname = import.meta.dirname;
@@ -8,42 +7,52 @@ const __dirname = import.meta.dirname;
 const hostname = "localhost";
 const port = 8080;
 
+let indexFile;
+let aboutFile;
+let contactMeFile;
+let file404;
+
 const requestListener = function (req, res) {
-  let fileName = "";
+  res.setHeader("Content-Type", "text/html");
 
   switch (req.url) {
     case "/":
-      fileName = "index.html";
-      break;
+      res.writeHead(200);
+      return res.end(indexFile);
 
     case "/contact-me":
-      fileName = "contact-me.html";
-      break;
+      res.writeHead(200);
+      return res.end(contactMeFile);
 
     case "/about":
-      fileName = "about.html";
-      break;
+      res.writeHead(200);
+      return res.end(aboutFile);
 
     default:
-      fileName = "404.html";
+      res.writeHead(404);
+      return res.end(file404);
   }
-
-  fs.readFile(join(__dirname, fileName), (err, data) => {
-    if (err) {
-      res.writeHead(500, { "content-type": "text/plain" });
-      res.end("server error");
-      return;
-    } else {
-      res.writeHead(fileName === "404.html" ? 404 : 200, {
-        "content-type": "text/html",
-      });
-      res.end(data);
-    }
-  });
 };
 
 const server = createServer(requestListener);
 
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://${hostname}:${port}/`);
-});
+Promise.all([
+  fs.readFile(join(__dirname, "index.html")),
+  fs.readFile(join(__dirname, "contact-me.html")),
+  fs.readFile(join(__dirname, "about.html")),
+  fs.readFile(join(__dirname, "404.html")),
+])
+  .then(([index, contact, about, notFound]) => {
+    indexFile = index;
+    contactMeFile = contact;
+    aboutFile = about;
+    file404 = notFound;
+
+    server.listen(port, hostname, () => {
+      console.log(`Server running at http://${hostname}:${port}/`);
+    });
+  })
+  .catch((err) => {
+    console.error(`Could not read files: ${err}`);
+    process.exit(1);
+  });
